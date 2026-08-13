@@ -297,7 +297,7 @@ fun SetupScreen() {
                     fontSize = 14.sp
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text("• Bar Toolbar Simbol: Auto-close kurung {}, [], (), "", ''", color = Color(0xFFB0B0B0), fontSize = 12.sp)
+                Text("• Bar Toolbar Simbol: Auto-close kurung {}, [], (), \"\", ''", color = Color(0xFFB0B0B0), fontSize = 12.sp)
                 Text("• Modifier Key: Modus Ctrl, Alt, Meta untuk shortcut Ctrl+A/C/V/Z", color = Color(0xFFB0B0B0), fontSize = 12.sp)
                 Text("• Gesture Spacebar: Usap (Swipe) Spacebar ke kiri/kanan/atas/bawah untuk navigasi kursor cepat", color = Color(0xFFB0B0B0), fontSize = 12.sp)
                 Text("• Function Keys: Tombol F1 - F12, Esc, Tab, Home, End, PgUp, PgDn", color = Color(0xFFB0B0B0), fontSize = 12.sp)

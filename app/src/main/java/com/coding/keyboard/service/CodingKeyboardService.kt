@@ -26,14 +26,13 @@ class CodingKeyboardService : InputMethodService(), LifecycleOwner, ViewModelSto
     private val savedStateRegistryController = SavedStateRegistryController.create(this)
 
     private val keyboardState = KeyboardState()
-    private lateinit var keyboardController: KeyboardController
+    private val keyboardController = KeyboardController(null, keyboardState)
 
     override fun onCreate() {
         super.onCreate()
+        savedStateRegistryController.performAttach()
         savedStateRegistryController.performRestore(null)
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
-
-        keyboardController = KeyboardController(null, keyboardState)
     }
 
     override fun onCreateInputView(): View {
@@ -49,20 +48,24 @@ class CodingKeyboardService : InputMethodService(), LifecycleOwner, ViewModelSto
                 )
             }
         }
-
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
-        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
-
         return composeView
     }
 
     override fun onStartInputView(info: EditorInfo?, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         keyboardController.updateInputConnection(currentInputConnection)
+        if (lifecycleRegistry.currentState.isAtLeast(Lifecycle.State.INITIALIZED)) {
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
+        }
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
+        if (lifecycleRegistry.currentState.isAtLeast(Lifecycle.State.RESUMED)) {
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+            lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        }
         if (!keyboardState.isCtrlActive.value && !keyboardState.isAltActive.value) {
             keyboardState.resetModifiers()
         }

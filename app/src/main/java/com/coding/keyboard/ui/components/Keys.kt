@@ -4,12 +4,18 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +28,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.coding.keyboard.core.Constants
 import com.coding.keyboard.ui.theme.KeyboardTheme
+import kotlin.math.abs
 
 @Composable
 fun KeyContainer(
@@ -42,7 +49,11 @@ fun KeyContainer(
 
     if (onClick != null) {
         boxModifier = boxModifier.clickable {
-            view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            try {
+                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+            } catch (e: Exception) {
+                // Ignore haptic feedback errors on unsupported devices
+            }
             onClick()
         }
     }
@@ -137,18 +148,22 @@ fun SpacebarKey(
             .height(KeyboardTheme.dimens.keyHeight)
             .clip(RoundedCornerShape(KeyboardTheme.dimens.keyCornerRadius))
             .background(KeyboardTheme.colors.keyBackgroundAction)
-            .clickable { 
-                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onTap() 
+            .clickable {
+                try {
+                    view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                } catch (e: Exception) {
+                    // Ignore haptic feedback errors
+                }
+                onTap()
             }
             .pointerInput(Unit) {
                 detectDragGestures(
-                    onDragStart = { 
-                         accumulatedDragX = 0f 
-                         accumulatedDragY = 0f
+                    onDragStart = {
+                        accumulatedDragX = 0f
+                        accumulatedDragY = 0f
                     },
-                    onDragEnd = { 
-                         accumulatedDragX = 0f
+                    onDragEnd = {
+                        accumulatedDragX = 0f
                         accumulatedDragY = 0f
                     },
                     onDrag = { change, dragAmount ->
@@ -156,14 +171,18 @@ fun SpacebarKey(
                         accumulatedDragX += dragAmount.x
                         accumulatedDragY += dragAmount.y
 
-                        if (kotlin.math.abs(accumulatedDragX) > Constants.SWIPE_CURSOR_THRESHOLD_PX) {
-                            view.performHapticFeedback(9) 
+                        if (abs(accumulatedDragX) > Constants.SWIPE_CURSOR_THRESHOLD_PX) {
+                            try {
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            } catch (e: Exception) {}
                             if (accumulatedDragX > 0) onMoveCursorLeftRight(1)
                             else onMoveCursorLeftRight(-1)
                             accumulatedDragX = 0f
                             accumulatedDragY = 0f
-                        } else if (kotlin.math.abs(accumulatedDragY) > Constants.SWIPE_CURSOR_THRESHOLD_PX) {
-                            view.performHapticFeedback(9)
+                        } else if (abs(accumulatedDragY) > Constants.SWIPE_CURSOR_THRESHOLD_PX) {
+                            try {
+                                view.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                            } catch (e: Exception) {}
                             if (accumulatedDragY > 0) onMoveCursorUpDown(1)
                             else onMoveCursorUpDown(-1)
                             accumulatedDragY = 0f

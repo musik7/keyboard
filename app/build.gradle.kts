@@ -17,20 +17,24 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
     kotlinOptions {
         jvmTarget = "17"
     }
+
     buildFeatures {
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.4"
     }
@@ -41,7 +45,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0")
     implementation("androidx.activity:activity-compose:1.8.2")
-    
+
     val composeBom = platform("androidx.compose:compose-bom:2024.02.00")
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
@@ -49,6 +53,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
-    
+
     implementation("androidx.savedstate:savedstate-ktx:1.2.1")
 }

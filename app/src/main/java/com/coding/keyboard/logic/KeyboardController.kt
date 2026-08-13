@@ -1,5 +1,6 @@
 package com.coding.keyboard.logic
 
+import android.os.SystemClock
 import android.view.KeyEvent
 import android.view.inputmethod.ExtractedTextRequest
 import android.view.inputmethod.InputConnection
@@ -13,33 +14,32 @@ class KeyboardController(
     }
 
     fun commitText(text: String) {
-        // 1. Intercept shortcut if Ctrl, Alt, or Meta is Active
-        if ((state.isCtrlActive.value || state.isAltActive.value || state.isMetaActive.value) && text.length == 1) {
-            handleShortcut(text.lowercase())
-            state.resetModifiers() // Matikan modifier setelah eksekusi
-            return
-        }
-
-        // 2. Normal Typing
-        var finalText = text
-        
-        // Cek jika teks adalah huruf tunggal, aplikasikan logika Shift
-        if (text.length == 1 && text.first().isLetter()) {
-            if (state.shiftMode.value != ShiftMode.LOWERCASE) {
-                finalText = text.uppercase()
+        val ic = inputConnection ?: return
+        try {
+            if ((state.isCtrlActive.value || state.isAltActive.value || state.isMetaActive.value) && text.length == 1) {
+                handleShortcut(text.lowercase())
+                state.resetModifiers()
+                return
             }
-            // Auto reset shift jika mode-nya bukan CAPS_LOCK
-            state.resetShiftIfNeeded()
-        }
 
-        inputConnection?.commitText(finalText, 1)
+            var finalText = text
+
+            if (text.length == 1 && text.first().isLetter()) {
+                if (state.shiftMode.value != ShiftMode.LOWERCASE) {
+                    finalText = text.uppercase()
+                }
+                state.resetShiftIfNeeded()
+            }
+
+            ic.commitText(finalText, 1)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
-    // --- Shortcut Logic (Ctrl/Alt + Key) ---
     private fun handleShortcut(key: String) {
         val ic = inputConnection ?: return
-        
-        // Mapping string ke KeyCode Android
+
         val keyCode = when (key) {
             "a" -> KeyEvent.KEYCODE_A
             "b" -> KeyEvent.KEYCODE_B
@@ -81,17 +81,18 @@ class KeyboardController(
         }
 
         if (keyCode != null) {
-            // Strategi 1: Kirim Hardware KeyEvent murni (Untuk Code Editor & Termux)
             sendModifierKeyEvent(keyCode)
-
-            // Strategi 2: Fallback Android Context Menu (Jika hanya Ctrl yang aktif dan huruf spesifik)
             if (state.isCtrlActive.value && !state.isAltActive.value) {
-                when (key) {
-                    "a" -> ic.performContextMenuAction(android.R.id.selectAll)
-                    "c" -> ic.performContextMenuAction(android.R.id.copy)
-                    "v" -> ic.performContextMenuAction(android.R.id.paste)
-                    "x" -> ic.performContextMenuAction(android.R.id.cut)
-                    "z" -> ic.performContextMenuAction(android.R.id.undo)
+                try {
+                    when (key) {
+                        "a" -> ic.performContextMenuAction(android.R.id.selectAll)
+                        "c" -> ic.performContextMenuAction(android.R.id.copy)
+                        "v" -> ic.performContextMenuAction(android.R.id.paste)
+                        "x" -> ic.performContextMenuAction(android.R.id.cut)
+                        "z" -> ic.performContextMenuAction(android.R.id.undo)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
             }
         }
@@ -148,16 +149,19 @@ class KeyboardController(
 
     private fun sendHardwareKeyEvent(keyCode: Int, metaState: Int = 0) {
         val ic = inputConnection ?: return
-        
-        val downEvent = KeyEvent(
-            0, 0, KeyEvent.ACTION_DOWN, keyCode, 0, metaState
-        )
-        val upEvent = KeyEvent(
-            0, 0, KeyEvent.ACTION_UP, keyCode, 0, metaState
-        )
-
-        ic.sendKeyEvent(downEvent)
-        ic.sendKeyEvent(upEvent)
+        try {
+            val now = SystemClock.uptimeMillis()
+            val downEvent = KeyEvent(
+                now, now, KeyEvent.ACTION_DOWN, keyCode, 0, metaState
+            )
+            val upEvent = KeyEvent(
+                now, now, KeyEvent.ACTION_UP, keyCode, 0, metaState
+            )
+            ic.sendKeyEvent(downEvent)
+            ic.sendKeyEvent(upEvent)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun sendModifierKeyEvent(keyCode: Int) {
@@ -169,32 +173,41 @@ class KeyboardController(
     }
 
     fun deleteBackward() {
-        inputConnection?.deleteSurroundingText(1, 0)
+        val ic = inputConnection ?: return
+        try {
+            val selectedText = ic.getSelectedText(0)
+            if (!selectedText.isNullOrEmpty()) {
+                ic.commitText("", 1)
+            } else {
+                ic.deleteSurroundingText(1, 0)
+            }
+        } catch (e: Exception) {
+            sendHardwareKeyEvent(KeyEvent.KEYCODE_DEL)
+        }
     }
 
-    // Fungsi khusus untuk Toolbar: Auto-pair brackets
     fun commitCodingSymbol(symbol: String) {
         val pair = when (symbol) {
             "{" -> "{}"
             "[" -> "[]"
             "(" -> "()"
-            "\"" -> "\"\""
+            """ -> """"
             "'" -> "''"
             "`" -> "``"
             else -> symbol
         }
-
-        inputConnection?.commitText(pair, 1)
-        
-        // Jika simbol adalah pasangan (length > 1), pindahkan kursor 1 langkah ke kiri
-        if (pair.length == 2) {
-            moveCursor(-1)
+        val ic = inputConnection ?: return
+        try {
+            ic.commitText(pair, 1)
+            if (pair.length == 2) {
+                moveCursor(-1)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
     fun moveCursor(offsetChars: Int) {
-        // Jika ada modifier (Ctrl/Alt/Meta) yang aktif, gunakan Hardware KeyEvent (D-Pad Left/Right)
-        // Ini berguna untuk fitur seperti "Jump Word" (Ctrl+Left) atau "Select Word" (Shift+Ctrl+Left)
         if (state.isCtrlActive.value || state.isAltActive.value || state.isMetaActive.value) {
             val keyCode = if (offsetChars > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
             sendModifierKeyEvent(keyCode)
@@ -202,13 +215,21 @@ class KeyboardController(
             return
         }
 
-        // Jika tidak ada modifier, gunakan smooth selection (Pindah per 1 karakter)
         val ic = inputConnection ?: return
-        val extractedText = ic.getExtractedText(ExtractedTextRequest(), 0) ?: return
-        
-        val currentPosition = extractedText.selectionStart
-        val newPosition = (currentPosition + offsetChars).coerceIn(0, extractedText.text.length)
-        
-        ic.setSelection(newPosition, newPosition)
+        try {
+            val extractedText = ic.getExtractedText(ExtractedTextRequest(), 0)
+            if (extractedText != null && extractedText.text != null) {
+                val text = extractedText.text
+                val currentPosition = if (extractedText.selectionStart >= 0) extractedText.selectionStart else 0
+                val newPosition = (currentPosition + offsetChars).coerceIn(0, text.length)
+                ic.setSelection(newPosition, newPosition)
+            } else {
+                val keyCode = if (offsetChars > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
+                sendHardwareKeyEvent(keyCode)
+            }
+        } catch (e: Exception) {
+            val keyCode = if (offsetChars > 0) KeyEvent.KEYCODE_DPAD_RIGHT else KeyEvent.KEYCODE_DPAD_LEFT
+            sendHardwareKeyEvent(keyCode)
+        }
     }
 }
